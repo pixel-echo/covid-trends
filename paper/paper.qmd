@@ -119,7 +119,7 @@ data |>
 
 ```
 
-The indicators varaiables intubated, hospitalized, and ICU tracks if a person required severe medical attention during their COVID case. Most cases in Toronto did not require severe medical attention but a total number of 18735 required some type of medical attention as seen in @tbl-medical-attention.
+The indicators variables intubated, hospitalized, and ICU tracks if a person required severe medical attention during their COVID case. Most cases in Toronto did not require severe medical attention but a total number of 18735 required some type of medical attention as seen in @tbl-medical-attention.
 
 ```{r}
 
@@ -205,13 +205,15 @@ $$
 
 A threshold of 0.5 was used to classify predicted probabilities into fatal and non-fatal cases of COVID-19. Probabilities greater than 0.5 were classified as fatal cases, while probabilities less than 0.5 were classified as non-fatal cases. This model had a test accuracy of 98.7%.
 
-# Results 
+# Results
 
 Using our model results we can infer that elderly age and hospitalization are significant risk factors of COVID fatality. We can visualize the relationships between fatality and different demographics using the same packages as before.
 
-When we analyzed the yearly distribution of COVID 19 it had a bell shaped curve, however COVID fatality decreased every year during the pandemic due to Toronto's lockdown measures.
+When we analyzed the yearly distribution of COVID 19 it had a bell shaped curve, however COVID fatality decreased every year during the pandemic as seen in @fig-mortality-year.
 
 ```{r}
+#| label: fig-mortality-year
+#| fig-cap: COVID Mortality in Toronto From 2020 - 2023
 data <- read_csv("../data/analysis_data/clean_data.csv")
 data |>
   filter(outcome == "FATAL") |>
@@ -228,7 +230,11 @@ data |>
   labs(x = "Year", y = "Confirmed Covid Cases")
 ```
 
+Although Toronto has a higher population of Adults than Seniors they have the highest rates of COVID mortality as seen in @fig-age-mortality
+
 ```{r}
+#| label: fig-age-mortality
+#| fig-cap: COVID Mortality Across Different Neighbourhoods
 data |>
   filter(outcome == "FATAL") |>
   na.omit() |>
@@ -243,27 +249,16 @@ data |>
     plot.background = element_rect(color = "lightgrey", fill = NA, size = 1)
   ) +
   labs(x = "Age Group", y = "Confirmed Covid Cases")
-```
-
-```{r}
-
-library(knitr)
-data |>
-  filter(outcome == "FATAL") |>
-  select(ever_intubated, ever_hospitalized, ever_in_icu) |>
-  count(ever_intubated, ever_hospitalized, ever_in_icu) |>
-  rename(
-    "Intubated" = "ever_intubated",
-    "Hospitalized" = "ever_hospitalized",
-    "ICU" = "ever_in_icu",
-    "Cases" = "n"
-  ) |>
-  kable()
-
 
 ```
 
+Toronto's neighborhoods seem to have high fatality where there is high incidence. The variable by itself wasn't that significant to COVID mortality.
+
 ```{r}
+
+#| label: fig-location-mortality
+#| fig-cap: COVID Mortality Across Different Age Groups
+
 library(sf)
 data <- data |>
   filter(outcome == "FATAL") |>
