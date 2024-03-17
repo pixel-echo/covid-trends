@@ -18,5 +18,5 @@ predicted_probabilities <- predict(model, newdata = testing_data, type = "respon
 predicted_classes <- ifelse(predicted_probabilities > 0.5, 1, 0)
 accuracy <- mean(predicted_classes == testing_data$outcome)
 
-saveRDS(model, "models/model.rds")
+saveRDS(model, "model/model.rds")
 
