@@ -1,0 +1,306 @@
+---
+title: "Differences in COVID Fatality Across Various Populations within Toronto"
+author:
+  - Tara Chakkithara
+date: today
+thanks: "Code and data available at https://github.com/pixel-echo/covid-trends"
+appendix-style: default
+date-format: long
+abstract: "Throughout history, human societies have confronted many communicable diseases but the COVID-19 pandemic stands out significantly, as being the first pandemic met with a structured and technologically advanced response. This paper examines the varying prevalence of the illness among different populations in Toronto. Demographics such as age, neighbourhood, and medical attention were considered. A linear model was constructed to infer COVID-19 fatality based on this data where varaibles such as age over 90 and hospitalization were especially significant in predicting fatality.These results highlight target areas that could be used to improve public health policies in the future."
+pdf-engine: pdflatex
+format:
+  pdf:
+    engine: xelatex
+    toc: true
+    documentclass: article
+    geometry:
+      - top=30mm
+      - left=20mm
+      - heightrounded
+echo: false
+warning: false
+message: false
+number-sections: true
+bibliography: references.bib
+link-citations: true
+editor: visual
+---
+
+# Introduction
+
+One of the most famous occurrences of quarantine was in Eyam, England, during the Bubonic plague pandemic. The villagers of this small town decided to isolate within their community rather than escape elsewhere to avoid contagion, hoping to prevent the spread of the disease. Their sacrifice succeeded in containing the disease, but unfortunately, most infected individuals in the town passed away [@black_death].
+
+In the modern era, COVID-19 was the first pandemic equipped with mass communication and innovative technology, and the outcomes of this pandemic were far better than pandemics of the past. However, there were discrepancies in COVID-19 fatality and prevalence among different demographics. By identifying vulnerable groups and locations, public health facilities can continue to make better and more informed policy decisions.
+
+This paper presents a case study of Toronto and analyzes the relationships that age, neighborhood, and access to medical attention have with COVID-19 fatality. The analysis examines each variable individually and its relationship to fatality. Additionally, a model is constructed to estimate the risk of dying if one contracts COVID-19.
+
+# Data
+
+The data for this paper was sourced from Open Data Toronto and published by Toronto Public Health. It contains records of COVID-19 from January 2020 to January 2024 within the Toronto region, consisting of variables such as gender, age group, neighborhood, health outcomes, etc. This data set was selected over other similar data sets due to the credibility and extensive outreach of Toronto Public Health.
+
+Raw data was cleaned, truncated, and visualized with the help of multiple `R` packages [@citeR]. A clean data set focusing on variables of interest such as year, age group, neighborhood, outcomes, and health history indicators like hospitalization, intubation, and ICU stay was generated using the `tidyverse` package [@tidyverse]. The cleaning process involved mutating data entries for enhanced clarity, removing unconfirmed COVID-19 cases, and filtering out entries outside of the 2020-2023 time period. No additional variables were constructed during this process.
+
+Following the cleaning process, the distribution and trends of each variable were visualized using graphs, tables, and maps. Graphs were created using the `ggplot2` package in R [@ggplot2], tables were created using `knitr` [@knitr], and maps were created using `sf` [@sf]. These visualizations were then assessed and explained, taking into account broader contexts such as demographics and pandemic measures.
+
+```{r}
+library(tidyverse)
+library(sf)
+library(knitr)
+```
+
+```{r}
+#| label: fig-yearly
+#| fig-cap: Distribution of Covid Cases by Year
+
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("../data/analysis_data/clean_data.csv")
+
+data |>
+  ggplot(aes(x = year)) +
+  geom_bar(fill = "midnightblue" ) +
+  theme_light() +
+  theme(
+    axis.title = element_text(size = 7),
+    axis.text.x = element_text(margin = margin(0, 0, 10, 0)),
+    axis.text.y = element_text(margin = margin(0, 0, 0, 10)),
+    plot.margin = margin(1.3, 1.3, 0.3, 0.3, "cm"),
+    plot.background = element_rect(color = "lightgrey", fill = NA, size = 1)
+  ) +
+  labs(x = "Year", y = "Confirmed Covid Cases")
+```
+
+The distribution of COVID-19 cases from 2020 to 2023 offer us insights into general trends in COVID-19 activity within the Toronto region. The first case in Toronto was reported on January 23 2020. In the subsequent year the pandemic reached its peak with a total of 174,465 cases confirmed by Toronto Public Health. By 2023 the pandemic had reached its lowest point with only 25,199 confirmed cases. This distribution follows a bell-shaped curve as depicted in @fig-yearly. These trends are a reflection of Toronto's pandemic measures. COVID vaccination in Ontario started in at the end of 2020 and vaccination rates reached 80% by August 2022 [@auditoronca2022], helping drive COVID-19 incidence down in 2023.
+
+```{r}
+#| label: fig-age
+#| fig-cap: Distribiution Covid Cases
+library(tidyverse)
+library(ggthemes)
+
+data <- read_csv("../data/analysis_data/clean_data.csv")
+
+data |>
+  na.omit() |>
+  ggplot(aes(x = age_group)) +
+  geom_bar(fill = "darkorchid4" ) +
+  theme_light() +
+  theme(
+    axis.title = element_text(size = 7),
+    axis.text.x = element_text(margin = margin(0, 0, 10, 0)),
+    axis.text.y = element_text(margin = margin(0, 0, 0, 10)),
+    plot.margin = margin(1.3, 1.3, 0.3, 0.3, "cm"),
+    plot.background = element_rect(color = "lightgrey", fill = NA, size = 1)
+  ) +
+  labs(x = "Age Group", y = "Confirmed Covid Cases")
+```
+
+The distribution of age group is visualized in @fig-age. During the pandemic the age group 20-29 faced the highest rates of COVID incidence. This group had a total number of 108, 953 COVID cases from 2020 - 2023. While the age group with the least incidence was the 90+ group. This may be due to Toronto's demographics. In 2021 only 2.6% of the population was over the age of 85 while 40% of the population has an age from 25 to 40 [@toronto2021census].
+
+{{< pagebreak >}}
+
+```{r}
+#| label: tbl-medical-attention
+#| tbl-cap: Medical Attention Needed During The Pandemic
+
+library(knitr)
+data <- read_csv("../data/analysis_data/clean_data.csv")
+data |>
+  select(ever_intubated, ever_hospitalized, ever_in_icu) |>
+  count(ever_intubated, ever_hospitalized, ever_in_icu) |>
+  rename(
+    "Intubated" = "ever_intubated",
+    "Hospitalized" = "ever_hospitalized",
+    "ICU" = "ever_in_icu",
+    "Cases" = "n"
+  ) |>
+  kable()
+
+```
+
+The indicators varaiables intubated, hospitalized, and ICU tracks if a person required severe medical attention during their COVID case. Most cases in Toronto did not require severe medical attention but a total number of 18735 required some type of medical attention as seen in @tbl-medical-attention.
+
+```{r}
+
+library(sf)
+data <- read_csv("../data/analysis_data/clean_data.csv")
+data <- data |>
+  select(neighbourhood_name) |>
+  count(neighbourhood_name) |>
+  filter(!is.na(neighbourhood_name)) |>
+  mutate(neighbourhood_name = gsub("[^[:alnum:]]+", "_", neighbourhood_name)) |>
+  mutate(neighbourhood_name = tolower(neighbourhood_name)) |>
+  mutate(
+    neighbourhood_name = ifelse(neighbourhood_name == "weston_pellam_park", "weston_pelham_park", neighbourhood_name)
+  )
+data$n <- as.factor(data$n)
+
+toronto <- st_read("../data/raw_data/toronto/toronto.shp", stringsAsFactors = FALSE, quiet = TRUE)
+toronto <- toronto |>
+  rename(neighbourhood_name = AREA_NA7) |>
+  mutate(
+    neighbourhood_name = gsub("\\(.*?\\)", "", neighbourhood_name)
+  ) |>
+  mutate(neighbourhood_name = trimws(neighbourhood_name, "right")) |>
+  mutate(neighbourhood_name = gsub("[^[:alnum:]]+", "_", neighbourhood_name)) |>
+  mutate(neighbourhood_name = tolower(neighbourhood_name))
+
+merged_data <- merge(toronto, data, by.x = "neighbourhood_name")
+
+custom_palette <- colorRampPalette(c("lightblue", "red"))(140)
+ggplot(merged_data, aes(fill = n)) +
+  geom_sf() +
+  scale_fill_manual(values = custom_palette, guide = FALSE) +
+  labs(fill = "COVID Count") +
+  theme_void()
+```
+
+Different neighborhoods in Toronto saw different rates of incidence. Areas at the heart of Toronto experienced fewer cases of COVID while areas close to the outskirts of Toronto experienced a lot more. The three neighborhoods that had the highest rates of COVID-19 were Downsview, Woburn, and the Waterfront Communities. While the three neighborhoods that saw the lowest rate of incidence were Lambton Baby Point, Blake - Jones, and Runnymede.
+
+Finally, the last variable studied was the outcome variables. It denotes the health outcomes of patients. Patient cases were either resolved, fatal, or they are still active. As seen in @tbl-outcome, most cases of COVID-19 were resolved but around 5089 cases were fatal.
+
+```{r}
+#| label: tbl-outcome
+#| tbl-cap: COVID Outcomes in Toronto From 2020 - 2023
+library(knitr)
+data <- read_csv("../data/analysis_data/clean_data.csv")
+data |>
+  select(outcome) |>
+  count(outcome) |>
+  mutate(
+    outcome = case_when(
+      outcome == "ACTIVE" ~ 'Active',
+      outcome == "FATAL" ~ 'Fatal',
+      outcome == "RESOLVED" ~ 'Resolved'
+      )
+  ) |>
+  rename("Outcome" = "outcome", "Count" = "n") |>
+  kable()
+```
+
+{{< pagebreak >}}
+
+# Measurement
+
+Although Open Data Toronto and Toronto Public Health are both reliable sources no measurement is 100% accurate. However measurement within this data set is accurate since most variables are categorical variables that we can see. For example, its easy to measure whether or not a person receives additional medical attention, where they live, what year they catch COVID-19. This is the data set's strength. One way measurement may be lacking is due to under reporting. People may have COVID but that doesn't mean they will get tested and report their case to Toronto Public Health. So this data set may have a bias of reporting more serious cases of COVID compared to ones that were less serious.
+
+# Model
+
+Logistic regression was used to model COVID fatality risk given factors such as elderly age, hospitalization, intubation, and ICU stay. Before training the logistic model a smaller data set was created by transforming the categorical variables into indicator variables. This step was essential in training the model.
+
+The data set was then randomly split into 70% training data and 30% testing data to evaluate the model's performance. The logistic regression model was trained using the training data set, and its predictive performance was assessed on the testing data set. The logistic regression equation is as follows :
+
+$$
+logit(x) = -6.45 + 2.43X_1 + 3.45X_2 + 1.621X_3 + 1.55X_4 + 1.91X_5 + 2.85X_6
+$$
+
+$$
+X_1 \sim \text{Hospitalization, } X_2 \sim \text{Age Above 90, } X_3 \sim \text{ICU}
+$$
+
+$$
+X_4 \sim \text{Intubated, } X_5 \sim \text{Age Group 70 to 79, } X_6 \sim \text{Intubated, Age Group 80 to 89}
+$$
+
+A threshold of 0.5 was used to classify predicted probabilities into fatal and non-fatal cases of COVID-19. Probabilities greater than 0.5 were classified as fatal cases, while probabilities less than 0.5 were classified as non-fatal cases. This model had a test accuracy of 98.7%.
+
+# Results 
+
+Using our model results we can infer that elderly age and hospitalization are significant risk factors of COVID fatality. We can visualize the relationships between fatality and different demographics using the same packages as before.
+
+When we analyzed the yearly distribution of COVID 19 it had a bell shaped curve, however COVID fatality decreased every year during the pandemic due to Toronto's lockdown measures.
+
+```{r}
+data <- read_csv("../data/analysis_data/clean_data.csv")
+data |>
+  filter(outcome == "FATAL") |>
+  ggplot(aes(x = year)) +
+  geom_bar(fill = "deeppink4" ) +
+  theme_light() +
+  theme(
+    axis.title = element_text(size = 7),
+    axis.text.x = element_text(margin = margin(0, 0, 10, 0)),
+    axis.text.y = element_text(margin = margin(0, 0, 0, 10)),
+    plot.margin = margin(1.3, 1.3, 0.3, 0.3, "cm"),
+    plot.background = element_rect(color = "lightgrey", fill = NA, size = 1)
+  ) +
+  labs(x = "Year", y = "Confirmed Covid Cases")
+```
+
+```{r}
+data |>
+  filter(outcome == "FATAL") |>
+  na.omit() |>
+  ggplot(aes(x = age_group)) +
+  geom_bar(fill = "darkorchid4" ) +
+  theme_light() +
+  theme(
+    axis.title = element_text(size = 7),
+    axis.text.x = element_text(margin = margin(0, 0, 10, 0)),
+    axis.text.y = element_text(margin = margin(0, 0, 0, 10)),
+    plot.margin = margin(1.3, 1.3, 0.3, 0.3, "cm"),
+    plot.background = element_rect(color = "lightgrey", fill = NA, size = 1)
+  ) +
+  labs(x = "Age Group", y = "Confirmed Covid Cases")
+```
+
+```{r}
+
+library(knitr)
+data |>
+  filter(outcome == "FATAL") |>
+  select(ever_intubated, ever_hospitalized, ever_in_icu) |>
+  count(ever_intubated, ever_hospitalized, ever_in_icu) |>
+  rename(
+    "Intubated" = "ever_intubated",
+    "Hospitalized" = "ever_hospitalized",
+    "ICU" = "ever_in_icu",
+    "Cases" = "n"
+  ) |>
+  kable()
+
+
+```
+
+```{r}
+library(sf)
+data <- data |>
+  filter(outcome == "FATAL") |>
+  select(neighbourhood_name) |>
+  count(neighbourhood_name) |>
+  filter(!is.na(neighbourhood_name)) |>
+  mutate(neighbourhood_name = gsub("[^[:alnum:]]+", "_", neighbourhood_name)) |>
+  mutate(neighbourhood_name = tolower(neighbourhood_name)) |>
+  mutate(
+    neighbourhood_name = ifelse(neighbourhood_name == "weston_pellam_park", "weston_pelham_park", neighbourhood_name)
+  )
+data$n <- as.factor(data$n)
+
+toronto <- st_read("../data/raw_data/toronto/toronto.shp", stringsAsFactors = FALSE, quiet = TRUE)
+toronto <- toronto |>
+  rename(neighbourhood_name = AREA_NA7) |>
+  mutate(
+    neighbourhood_name = gsub("\\(.*?\\)", "", neighbourhood_name)
+  ) |>
+  mutate(neighbourhood_name = trimws(neighbourhood_name, "right")) |>
+  mutate(neighbourhood_name = gsub("[^[:alnum:]]+", "_", neighbourhood_name)) |>
+  mutate(neighbourhood_name = tolower(neighbourhood_name))
+
+merged_data <- merge(toronto, data, by.x = "neighbourhood_name")
+
+custom_palette <- colorRampPalette(c("lightblue", "red"))(140)
+ggplot(merged_data, aes(fill = n)) +
+  geom_sf() +
+  scale_fill_manual(values = custom_palette, guide = FALSE) +
+  labs(fill = "COVID Count") +
+  theme_void()
+```
+
+# Discussion
+
+An interesting factor noticed during the creation of the linear model was that neighborhood data wasn't a significant predictor of fatality. Neighborhood data may indicate COVID prevalence but it didn't seem to affect fatality much. Some weaknesses of the model constructed are that only a few demographics are considered. Demographics such as race and gender were not considered. However we still learned about the significance of age and hospitalization when it comes to COVID fatality.
+
+In the future further neighborhood analysis and other demographics may be analyzed to continually improve public health policy. Being prepared is better for everyone.
+
+# Appendix
